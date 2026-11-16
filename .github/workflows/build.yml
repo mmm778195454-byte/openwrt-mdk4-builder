@@ -1,0 +1,36 @@
+name: Build MDK4 Package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gawk gettext git libncurses5-dev libssl-dev python3 rsync unzip zstd wget
+
+      - name: Download & Setup OpenWrt SDK
+        run: |
+          wget https://downloads.openwrt.org/releases/24.10.1/targets/ath79/nand/openwrt-sdk-24.10.1-ath79-nand_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+          tar -I zstd -xf openwrt-sdk-24.10.1-ath79-nand_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+          mv openwrt-sdk-24.10.1-ath79-nand* sdk
+
+      - name: Compile mdk4
+        run: |
+          cd sdk
+          ./scripts/feeds update -a
+          ./scripts/feeds install mdk4
+          make defconfig
+          make package/mdk4/compile V=s
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdk4-openwrt-24.10.1
+          path: sdk/bin/
